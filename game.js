@@ -1,48 +1,107 @@
+const cards = require("./cards.js");
+
+let updateInfo = () => {};
+let _users = [
+];
+let _matches = [];
+let _currentPlayer = 0;
+
+const gameState = {
+    get users() {
+        return _users;
+    },
+    set users(value) {
+        _users = value;
+        //console.log("Users were updated", _users);
+        updateInfo();
+    },
+    get matches() {
+        return _matches;
+    },
+    set matches(value) {
+        _matches = value;
+        //console.log("Matches were updated", _matches);
+        updateInfo();
+    },
+    get currentPlayer() {
+        return _currentPlayer;
+    },
+    set currentPlayer(value) {
+        _currentPlayer = value;        
+        updateInfo();
+    },
+};
+
 function initializeGameSocket(io) {
-    let _userCount = 0;
-    let _text = "";
-
-    const gameState = {
-        get userCount() {
-            return _userCount;
-        },
-        set userCount(value) {
-            _userCount = value;
-            updateUserCount();
-        },
-        get text() {
-            return _text;
-        },
-        set text(value) {
-            _text = value;
-            updateGameState();
-        },
-    };
-
-    const updateGameState = () => {
+    updateInfo = () => {
         io.emit("gameStateUpdate", gameState);
     };
 
-    const updateUserCount = () => {
-        io.emit("updateUserCount", gameState);
-        console.log("User count updated: " + gameState.userCount);
-    };
-
     io.on("connection", (socket) => {
-        gameState.userCount++;
-        console.log("A user connected: " + socket.id);
+        //console.log("User connected: " + socket.id);
 
-        socket.on("message", (text) => {
-            console.log("message received: ", text);
-            gameState.text = text;
-            io.emit("gameStateUpdate", text);
+        socket.on("join", (data) => {
+            //console.log("User joined: " + data.username);
+            let users = gameState.users;
+            users.push({ id: socket.id, username: data.username, cards: [] });
+            gameState.users = users;
         });
 
         socket.on("disconnect", () => {
-            console.log("User disconnected: " + socket.id);
-            gameState.userCount--;
+            //console.log("User disconnected: " + socket.id);
+            gameState.users = gameState.users.filter((user) => user.id !== socket.id);
+            //console.log("Current users: ", gameState.users);
+        });
+
+        socket.on("startGame", () => {
+            let shuffledDeck = shuffle();
+            giveCards(shuffledDeck);
+            let matches = gameState.matches;
+            matches.push({ matchNumber: matches.length + 1, rounds: [] });
+            gameState.matches = matches;
+            gameState.currentPlayer = gameState.users[0];
+            io.emit("gameStarted");
+        });
+
+        socket.on("playCard", (data) => {`1 `
+            let currentPlayer = gameState.currentPlayer;
+            let currentPlayerIndex = gameState.users.indexOf(currentPlayer);
+            let nextPlayerIndex = (currentPlayerIndex + 1) % 4;
+            let nextPlayer = gameState.users[nextPlayerIndex];
+            let playedCard = data.card;
+
+            let currentMatch = gameState.matches[gameState.matches.length - 1];
+            let currentRound = currentMatch.rounds[currentMatch.rounds.length - 1];
+            console.log(currentMatch);
+            console.log(currentRound);
+            
+            gameState.currentPlayer = nextPlayer;
         });
     });
+}
+
+
+function giveCards(deck) {
+    let users = gameState.users;
+    for (let i = 0; i < 4; i++) {
+        let user = users[i];
+        user.cards = deck.slice(i * 10, i * 10 + 10);
+    }
+    gameState.users = users;
+}
+
+function shuffle() {
+    let currentIndex = cards.length,
+        randomIndex;
+
+    while (currentIndex != 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+
+        [cards[currentIndex], cards[randomIndex]] = [cards[randomIndex], cards[currentIndex]];
+    }
+
+    return cards;
 }
 
 module.exports = initializeGameSocket;

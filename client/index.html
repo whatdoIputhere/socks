@@ -4,13 +4,32 @@
 <head>
 	<meta charset="UTF-8">
 	<title>hehe</title>
+	<link rel="stylesheet" href="style.css">
 	<script type="module" src="script.js"></script>
 </head>
 
 <body>
-	<h1 id="userCount"></h1>
+	<div id="pregame">
+		<div id="usernameInputDiv">
+			<h3>Name</h3>
+			<input type="text" id="nameInput" value="user4" />
+			<button id="join">Play</button>
+		</div>
+		<div id="usersWaiting" style="display: none;">
+			<h2>Connected</h2>
+			<div id="usersList"></div>
+		</div>
+	</div>
 	<div id="gameArea">
-
+		<div id="tableAndSeats">
+			<div id="player1" class="player"></div>
+			<div id="player2" class="player"></div>
+			<div id="player3" class="player"></div>
+			<div id="player4" class="player"></div>
+		</div>
+		<div id="cardsInfo">
+			<div id="cardsdiv"></div>
+		</div>
 	</div>
 </body>
 
