@@ -1,10 +1,10 @@
 const cards = require("./cards.js");
 
 let updateInfo = () => {};
-let _users = [
-];
+let _users = [];
 let _matches = [];
 let _currentPlayer = 0;
+let _started = false;
 
 const gameState = {
     get users() {
@@ -19,15 +19,21 @@ const gameState = {
         return _matches;
     },
     set matches(value) {
-        _matches = value;
-        //console.log("Matches were updated", _matches);
+        _matches = value
         updateInfo();
     },
     get currentPlayer() {
         return _currentPlayer;
     },
     set currentPlayer(value) {
-        _currentPlayer = value;        
+        _currentPlayer = value;
+        updateInfo();
+    },
+    get started() {
+        return _started;
+    },
+    set started(value) {
+        _started = value;
         updateInfo();
     },
 };
@@ -57,29 +63,45 @@ function initializeGameSocket(io) {
             let shuffledDeck = shuffle();
             giveCards(shuffledDeck);
             let matches = gameState.matches;
-            matches.push({ matchNumber: matches.length + 1, rounds: [] });
+            matches.push({
+                matchNumber: matches.length + 1,
+                trunfo: gameState.users[3].cards[0],
+                rounds: [{ roundNumber: 1, turns: [] }],
+            });
             gameState.matches = matches;
-            gameState.currentPlayer = gameState.users[0];
+            gameState.currentPlayer = gameState.users[0];            
+            gameState.started = true;
             io.emit("gameStarted");
         });
 
-        socket.on("playCard", (data) => {`1 `
-            let currentPlayer = gameState.currentPlayer;
-            let currentPlayerIndex = gameState.users.indexOf(currentPlayer);
-            let nextPlayerIndex = (currentPlayerIndex + 1) % 4;
-            let nextPlayer = gameState.users[nextPlayerIndex];
-            let playedCard = data.card;
-
-            let currentMatch = gameState.matches[gameState.matches.length - 1];
-            let currentRound = currentMatch.rounds[currentMatch.rounds.length - 1];
-            console.log(currentMatch);
-            console.log(currentRound);
-            
-            gameState.currentPlayer = nextPlayer;
+        socket.on("playCard", (data) => {
+            updateRounds(data);
         });
     });
 }
 
+function updateRounds(data) {
+    let users = gameState.users;
+    let currentPlayer = gameState.currentPlayer;
+    let nextPlayer = users[(users.indexOf(currentPlayer) + 1) % 4];
+    let playedCard = data.card;
+
+    let matches = gameState.matches;
+    let match = matches[matches.length - 1];
+    let round = match.rounds[match.rounds.length - 1];
+    round.turns.push({ player: currentPlayer, card: playedCard });
+
+    gameState.matches = matches;
+    gameState.currentPlayer = nextPlayer;
+    // if (round.turns.length == 4) {
+        
+
+    //     let nextRound = { roundNumber: round.roundNumber + 1, turns: [] };
+    //     match.rounds.push(nextRound);
+    //     gameState.matches = matches;
+    //     gameState.currentPlayer = winner.player;
+    // }
+}
 
 function giveCards(deck) {
     let users = gameState.users;
